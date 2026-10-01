@@ -24,9 +24,12 @@ export async function fixture(t,scenario={}) {
   const child=spawn(process.execPath,[join(root,'claude-host-wrapper.mjs'),...argv],{cwd:dir,env:{...env,...overrides},stdio:['pipe','pipe','pipe']});
   let stdout='',stderr='';child.stdout.on('data',b=>stdout+=b);child.stderr.on('data',b=>stderr+=b);child.stdin.on('error',()=>{});if(input!==null)child.stdin.end(input);
   const done=new Promise(resolve=>child.on('close',(code,signal)=>resolve({code,signal,stdout,stderr})));
+  // A failed assertion must not leave a hanging wrapper that keeps the whole test run alive.
+  t.after(()=>{if(child.exitCode===null&&child.signalCode===null)child.kill('SIGTERM');});
   return {child,done};
  };
- const calls=async()=>{try{return (await readFile(log,'utf8')).trim().split('\n').map(JSON.parse);}catch(e){if(e.code==='ENOENT')return [];throw e;}};
+ // Only complete lines: the fixture may be in the middle of appending a large one.
+ const calls=async()=>{try{const text=await readFile(log,'utf8');return text.slice(0,text.lastIndexOf('\n')+1).split('\n').filter(Boolean).map(JSON.parse);}catch(e){if(e.code==='ENOENT')return [];throw e;}};
  const recordPath=async(name)=>{for(const d of await readdir(state,{withFileTypes:true})){if(d.isDirectory()){const path=join(state,d.name,name+'.json');try{await readFile(path);return path;}catch(e){if(e.code!=='ENOENT')throw e;}}}return null;};
  const records=async(name)=>{const path=await recordPath(name);return path?JSON.parse(await readFile(path,'utf8')):null;};
  return {dir,state,project,source,env,args,start,calls,records,recordPath,setScenario:s=>writeFile(configFile,JSON.stringify(s))};
