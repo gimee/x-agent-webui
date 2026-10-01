@@ -1,0 +1,20 @@
+# Reviewed false positives only; never add real installation credentials here.
+# The two OAuth values are public client identifiers inherited unchanged from upstream.
+packages/server/src/modules/hermes/controllers/xai-auth.ts:generic-api-key:14
+packages/server/src/modules/hermes/services/providers/copilot-device-flow.ts:generic-api-key:16
+# Synthetic credential-masking, voice-event and summary-redaction fixtures.
+tests/client/v050-f08-f11-coding-agent-config-view.test.ts:generic-api-key:17
+tests/client/v050-u27-settings-secret-mask.test.ts:generic-api-key:12
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:451
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:454
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:456
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:559
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:562
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:564
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:598
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:601
+tests/client/voice-dialogue-controls.test.ts:generic-api-key:603
+tests/server/claude-summary.test.ts:generic-api-key:221
+tests/server/claude-summary.test.ts:generic-api-key:222
+# Deliberately fake JWT used only by the mocked browser harness.
+tests/e2e/fixtures.ts:jwt:3

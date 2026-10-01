@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="X-Agent">
+  <defs>
+    <linearGradient id="xa-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111a33"/>
+      <stop offset="1" stop-color="#05070f"/>
+    </linearGradient>
+    <linearGradient id="xa-edge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5eead4" stop-opacity=".55"/>
+      <stop offset=".5" stop-color="#6366f1" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#a855f7" stop-opacity=".55"/>
+    </linearGradient>
+    <linearGradient id="xa-a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="xa-b" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c084fc"/>
+      <stop offset="1" stop-color="#4f46e5"/>
+    </linearGradient>
+    <radialGradient id="xa-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#818cf8" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#818cf8" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="xa-cross"><path d="M388 120H304L124 392h84Z"/></clipPath>
+  </defs>
+  <rect x="8" y="8" width="496" height="496" rx="116" fill="url(#xa-bg)"/>
+  <rect x="9.5" y="9.5" width="493" height="493" rx="114.5" fill="none" stroke="url(#xa-edge)" stroke-width="3"/>
+  <circle cx="256" cy="256" r="190" fill="url(#xa-glow)"/>
+  <path d="M388 120H304L124 392h84Z" fill="url(#xa-b)"/>
+  <path d="M124 120h84l180 272h-84Z" fill="none" stroke="#0b1022" stroke-width="30" stroke-linejoin="round" clip-path="url(#xa-cross)"/>
+  <path d="M124 120h84l180 272h-84Z" fill="url(#xa-a)"/>
+</svg>

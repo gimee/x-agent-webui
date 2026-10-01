@@ -1,0 +1,98 @@
+name: Verify source and Docker installation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check installer behavior
+        run: |
+          bash -n install.sh
+          python3 -m unittest discover -s tests/install -p 'test_*.py'
+          docker compose -f compose.yaml config --quiet
+      - name: Build the actual distribution
+        run: docker build --progress=plain -t x-agent-webui:verify .
+      - name: Fresh installation and persistent restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker volume create x-agent-smoke-hermes
+          docker volume create x-agent-smoke-webui
+          docker run -d --name x-agent-smoke \
+            -p 127.0.0.1:16060:6060 \
+            -v x-agent-smoke-hermes:/home/agent/.hermes \
+            -v x-agent-smoke-webui:/home/agent/.hermes-web-ui \
+            x-agent-webui:verify
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:16060/api/auth/status > auth-status.json; then break; fi
+            if [ "$(docker inspect -f '{{.State.Running}}' x-agent-smoke)" != true ]; then exit 1; fi
+            sleep 2
+          done
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error
+          with open('auth-status.json') as f:
+              auth = json.load(f)
+          assert auth['hasPasswordLogin'] is True
+          assert auth['hasUsers'] is False
+          with urllib.request.urlopen('http://127.0.0.1:16060/') as r:
+              assert r.status == 200
+              assert b'X-Agent-Webui' in r.read()
+          try:
+              urllib.request.urlopen('http://127.0.0.1:16060/api/auth/me')
+              raise AssertionError('Protected route allowed anonymous access')
+          except urllib.error.HTTPError as e:
+              assert e.code == 401
+          print('HTTP, branding, initial authentication and protected route checks passed')
+          PY
+          docker exec x-agent-smoke sh -c 'printf persistence-ok > /home/agent/.hermes/release-smoke-sentinel'
+          docker stop -t 45 x-agent-smoke
+          docker start x-agent-smoke
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:16060/api/auth/status > /dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:16060/api/auth/status > /dev/null
+          docker exec x-agent-smoke python3 -c "from pathlib import Path; assert Path('/home/agent/.hermes/release-smoke-sentinel').read_text() == 'persistence-ok'; print('Persistent volume restart check passed')"
+      - name: Public curl installer end-to-end
+        if: ${{ !github.event.repository.private }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/gimee/x-agent-webui/main/install.sh | \
+            bash -s -- --dir "$RUNNER_TEMP/x-agent-install-smoke" --port 16061 --bind 127.0.0.1
+          curl -fsS http://127.0.0.1:16061/api/auth/status > installer-auth-status.json
+          python3 - <<'PY'
+          import json
+          with open('installer-auth-status.json') as f:
+              assert json.load(f)['hasPasswordLogin'] is True
+          print('Published curl installer reached a healthy authenticated installation')
+          PY
+      - name: Failure diagnostics
+        if: failure()
+        run: |
+          docker ps -a
+          docker logs --tail=120 x-agent-smoke 2>/dev/null || true
+      - name: Cleanup isolated smoke resources
+        if: always()
+        run: |
+          docker rm -f x-agent-smoke 2>/dev/null || true
+          docker volume rm x-agent-smoke-hermes x-agent-smoke-webui 2>/dev/null || true
+          if [ -f "$RUNNER_TEMP/x-agent-install-smoke/compose.yaml" ]; then
+            docker compose --project-directory "$RUNNER_TEMP/x-agent-install-smoke" \
+              --env-file "$RUNNER_TEMP/x-agent-install-smoke/.env" \
+              -f "$RUNNER_TEMP/x-agent-install-smoke/compose.yaml" down -v || true
+          fi
