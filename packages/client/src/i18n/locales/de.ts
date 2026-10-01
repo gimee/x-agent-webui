@@ -2795,6 +2795,8 @@ jobTriggered: 'Job ausgelost',
   },
 
   changelog: {
+    product_0_6_1_1: 'Claude chats that hit an API error (for example repeated 502 responses from a relay gateway) now show the native error text, such as "API Error: 502 … try again in a moment", instead of only "exited with code 75: Native call failed"; when the context check or the summary step before a compaction fails, the error carries the same native text.',
+    product_0_6_1_2: 'Session list tabs keep their shared border closed in right-to-left languages such as Arabic.',
     product_0_6_0_1: 'Rebranded as X-Agent-Webui: the browser title, login and boot screens, sidebar version (X-Agent vX.Y.Z), notifications, error messages and settings now use the X-Agent name, with a new X logo and favicon; the Hermes Agent name, internal identifiers, data directories and existing settings are unchanged, so no migration is needed.',
     product_0_5_3_1: 'Public release cleanup: documentation and tests use synthetic examples without internal acceptance data; the website receives a technical visual refresh with bilingual and mobile interactions.',
     product_0_5_2_1: 'Public community distribution: sanitized source snapshot, Docker installer, bilingual documentation, and project links to the independent repository and website. Upstream provenance and BSL license retained.',

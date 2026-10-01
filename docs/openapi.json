@@ -3,7 +3,7 @@
   "info": {
     "title": "X-Agent API",
     "description": "X-Agent API — chat sessions, scheduled jobs, platform channels, model management, skills, memory, logs, file browser, and terminal.",
-    "version": "0.6.0"
+    "version": "0.6.1"
   },
   "servers": [
     {

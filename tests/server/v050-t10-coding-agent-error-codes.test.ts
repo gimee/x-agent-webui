@@ -103,6 +103,29 @@ describe('hermes-v050:T10 coding-agent run.failed payloads', () => {
     }))
   })
 
+  it('fails the turn on the stream-json spelling of a native API error', async () => {
+    const { line, failed } = startClaudeRun()
+    line({ type: 'assistant', is_api_error_message: true, error: 'server_error', message: { content: [{ type: 'text', text: 'API Error: 502 Bad gateway' }] } })
+    await vi.waitFor(() => expect(failed()).toHaveLength(1))
+    expect(failed()[0].error).toBe('API Error: 502 Bad gateway')
+    expect(failed()[0].error_code).toBeUndefined()
+  })
+
+  it('keeps the native API error when the managed wrapper then exits 75', async () => {
+    const { manager, run, failed } = startClaudeRun()
+    ;(manager as any).startClaudePrintTurn(run, 'hello', '', [])
+    const child = spawned.at(-1)
+    child.stdout.write(`${JSON.stringify({ type: 'assistant', is_api_error_message: true, error: 'server_error', message: { content: [{ type: 'text', text: 'API Error: 502 Bad gateway' }] } })}\n`)
+    child.stderr.write('[host-compaction] Native call failed (1, 1 result(s), error): API Error: 502 Bad gateway\n')
+    await new Promise(resolve => setImmediate(resolve))
+    child.stdout.end()
+    child.emit('close', 75)
+    await vi.waitFor(() => expect(failed()).toHaveLength(1))
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(failed()).toHaveLength(1)
+    expect(failed()[0].error).toBe('API Error: 502 Bad gateway')
+  })
+
   it('does not code a provider error returned as the reply text', async () => {
     const { line, failed } = startClaudeRun()
     line({ type: 'assistant', isApiErrorMessage: true, message: { content: [{ type: 'text', text: 'API Error: 529 overloaded' }] } })

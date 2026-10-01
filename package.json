@@ -1,6 +1,6 @@
 {
   "name": "x-agent-webui",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "upstreamProvenance": {
     "repository": "EKKOLearnAI/hermes-studio",
     "tag": "v0.7.18",

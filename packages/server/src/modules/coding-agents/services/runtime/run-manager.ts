@@ -2071,7 +2071,8 @@ export class CodingAgentRunManager {
       return
     }
 
-    if (event.type === 'assistant' && event.isApiErrorMessage === true) {
+    // Claude Code's stream-json spells it is_api_error_message; transcript rows use isApiErrorMessage.
+    if (event.type === 'assistant' && (event.isApiErrorMessage === true || event.is_api_error_message === true)) {
       const errorText = claudeContentToText(event.message?.content).trim() || responseErrorMessage(event.error) || 'Claude Code API error'
       this.failClaudePrintTurn(run, errorText)
       return

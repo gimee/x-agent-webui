@@ -7,6 +7,7 @@ export interface ChangelogEntry {
 // 本产品自己的更新日志（与 CHANGELOG.md 保持一致）。
 // 每次二次开发：在这里追加一条 version 记录，并在全部 11 个 locale 的 changelog 段补上对应 key。
 export const changelog: ChangelogEntry[] = [
+  { version: '0.6.1', date: '2026-10-02', changes: ['changelog.product_0_6_1_1', 'changelog.product_0_6_1_2'] },
   { version: '0.6.0', date: '2026-10-01', changes: ['changelog.product_0_6_0_1'] },
   { version: '0.5.3', date: '2026-10-01', changes: ['changelog.product_0_5_3_1'] },
   { version: '0.5.2', date: '2026-10-01', changes: ['changelog.product_0_5_2_1'] },

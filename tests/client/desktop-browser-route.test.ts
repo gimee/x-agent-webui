@@ -45,7 +45,6 @@ describe('desktop browser chat panel gate', () => {
 
   it('separates the pure browser panel from the settings-only page', () => {
     const chatPanel = readFileSync('packages/client/src/components/hermes/chat/ChatPanel.vue', 'utf8')
-    const groupChatPanel = readFileSync('packages/client/src/components/hermes/group-chat/GroupChatPanel.vue', 'utf8')
     const browserPanel = readFileSync('packages/client/src/components/hermes/chat/DesktopBrowserPanel.vue', 'utf8')
     const settingsPage = readFileSync('packages/client/src/views/hermes/DesktopBrowserView.vue', 'utf8')
     const sidebar = readFileSync('packages/client/src/components/layout/AppSidebar.vue', 'utf8')
@@ -55,12 +54,6 @@ describe('desktop browser chat panel gate', () => {
     expect(chatPanel).toContain(':submit="submitBrowserAnnotations"')
     expect(chatPanel).toContain('await chatStore.sendMessage("", [attachment])')
     expect(chatPanel).toContain('OPEN_DESKTOP_BROWSER_PANEL_EVENT')
-    expect(groupChatPanel).toContain("activeWorkspacePanel = ref<'files' | 'terminal' | 'browser'>('files')")
-    expect(groupChatPanel).toContain('OPEN_DESKTOP_BROWSER_PANEL_EVENT')
-    expect(groupChatPanel).toContain('const DesktopBrowserPanel = defineAsyncComponent')
-    expect(groupChatPanel).toContain("activeWorkspacePanel === 'browser'")
-    expect(groupChatPanel).toContain(':submit="submitBrowserAnnotations"')
-    expect(groupChatPanel).toContain("await store.sendMessage('', [attachment])")
     expect(browserPanel).toContain('onAnnotationRequest')
     expect(browserPanel).toContain('EXTERNAL_OVERLAY_SELECTOR')
     expect(browserPanel).toContain("'.n-modal-body-wrapper'")

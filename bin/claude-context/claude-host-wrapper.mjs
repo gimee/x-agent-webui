@@ -53,10 +53,16 @@ async function call(command,args,input,forward=false) {
   checkAbort();if(overflow)throw new Error('Native output exceeded 64MiB validation limit');
   if(tail.length)line(tail);
   if(invalid)throw new Error('Invalid native stream-json output');
-  const results=events.filter(e=>e.type==='result'),result=results.at(-1);
+  const results=events.filter(e=>e.type==='result'),failed=results.find(r=>r.subtype!=='success'||r.is_error),result=failed??results.at(-1);
   // A background task notification starts another native turn inside the same
   // -p process, and every turn ends with its own result: all must succeed.
-  if(status.code!==0||!results.length||results.some(r=>r.subtype!=='success'||r.is_error))throw new Error(`Native call failed (${status.code}, ${results.length} result(s), ${result?.subtype??'no result'})`);
+  // Native API errors end with subtype 'success' plus is_error: name them and keep the native
+  // text ("API Error: 502 ..."), since results are withheld and fork output never reaches Studio.
+  if(status.code!==0||!results.length||failed) {
+    const outcome=!result?'no result':result.subtype!=='success'?result.subtype:result.is_error?'error':'success';
+    const detail=typeof failed?.result==='string'?failed.result.replace(/\s+/g,' ').trim().slice(0,300):'';
+    throw new Error(`Native call failed (${status.code}, ${results.length} result(s), ${outcome})${detail?`: ${detail}`:''}`);
+  }
   return events;
 }
 // hermes-v050:S4 one realpath per distinct cwd (a 9.9MB transcript has ~3,000 cwd rows, 1-2 cwds).

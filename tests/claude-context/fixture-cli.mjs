@@ -19,6 +19,13 @@ appendFileSync(process.env.FIXTURE_LOG,JSON.stringify({stage,args,input,envWindo
 const event=x=>process.stdout.write(JSON.stringify(x)+'\n');
 const outputId=stage==='request'?id:randomUUID();
 event({type:'system',subtype:'init',session_id:outputId});
+// Native API error after retries: an assistant error message, then a 'success' result with is_error, exit 1.
+if (cfg.apiError===stage) {
+ const text='API Error: 502 Bad gateway (fixture). This is a server-side issue, usually temporary — try again in a moment.';
+ event({type:'assistant',session_id:outputId,error:'server_error',is_api_error_message:true,message:{id:randomUUID(),role:'assistant',model:'<synthetic>',content:[{type:'text',text}]}});
+ event({type:'result',subtype:'success',is_error:true,session_id:outputId,result:text});
+ process.exit(1);
+}
 if (cfg.hang===stage) { for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{appendFileSync(process.env.FIXTURE_LOG,JSON.stringify({signal})+'\n');process.exit(signal==='SIGINT'?130:143);}); setInterval(()=>{},1000);await new Promise(()=>{}); }
 if (stage==='context') {
  // hermes-v051:R1-01 cfg.base: non-message context (system prompt, tools), 1000 by default.

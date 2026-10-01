@@ -339,6 +339,23 @@ test('background task notification turns (several successful results in one nati
  assert.doesNotMatch(bad.stdout,/"type":"result"/);
 });
 
+test('a native API error is named and keeps its text in the failure line',async t=>{
+ const f=await fixture(t,{tokens:100000,apiError:'request'});
+ const out=await f.start('request during a gateway outage').done;
+ assert.equal(out.code,75);
+ assert.match(out.stderr,/Native call failed \(1, 1 result\(s\), error\): API Error: 502 Bad gateway \(fixture\)\. This is a server-side issue/);
+ const events=out.stdout.trim().split('\n').filter(Boolean).map(JSON.parse);
+ assert.ok(events.some(e=>e.type==='assistant'&&e.is_api_error_message),'the native API error message still streams');
+ assert.equal(events.filter(e=>e.type==='result').length,0);
+ assert.ok(await f.records('pending'));
+ const fork=await fixture(t,{tokens:410000,apiError:'context'});
+ const failed=await fork.start().done;
+ assert.equal(failed.code,75);
+ assert.match(failed.stderr,/Native call failed \(1, 1 result\(s\), error\): API Error: 502 Bad gateway/);
+ assert.deepEqual((await fork.calls()).map(x=>x.stage),['context']);
+ assert.equal(await fork.records('pending'),null);
+});
+
 test('unsupported model passes exact raw args and env without managed scope',async t=>{
  const f=await fixture(t,{tokens:410000});
  const argv=f.args.map(v=>v==='claude-opus-5-5[1m]'?'unverified-model':v);

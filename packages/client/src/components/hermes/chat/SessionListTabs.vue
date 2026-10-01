@@ -66,8 +66,8 @@ function tabProps(value: 'all' | 'starred'): HTMLAttributes {
   font-weight: 600;
 }
 /* The taller active tab owns the shared edge, keeping the top step closed. */
-.session-list-tabs.n-tabs.n-tabs--card-type :deep(.n-tabs-tab[data-name="all"]:not(.n-tabs-tab--active)) { border-right-width: 0; }
-.session-list-tabs.n-tabs.n-tabs--card-type :deep(.n-tabs-tab[data-name="starred"]:not(.n-tabs-tab--active)) { border-left-width: 0; }
+.session-list-tabs.n-tabs.n-tabs--card-type :deep(.n-tabs-tab[data-name="all"]:not(.n-tabs-tab--active)) { border-inline-end-width: 0; }
+.session-list-tabs.n-tabs.n-tabs--card-type :deep(.n-tabs-tab[data-name="starred"]:not(.n-tabs-tab--active)) { border-inline-start-width: 0; }
 .session-list-tabs.n-tabs.n-tabs--card-type :deep(.n-tabs-tab:focus-visible) { outline: 2px solid var(--text-secondary); outline-offset: -3px; }
 
 </style>

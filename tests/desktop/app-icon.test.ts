@@ -43,14 +43,4 @@ describe('desktop app icon', () => {
     expect(builderConfig).toContain('icon: build/icons')
     expect(desktopPackage.devDependencies['electron-builder']).toMatch(/^\^26\./)
   })
-
-  it('builds macOS artifacts on runners that provide Xcode 26', () => {
-    const releaseWorkflow = readFileSync(resolve('.github/workflows/desktop-release.yml'), 'utf8')
-    const manualWorkflow = readFileSync(resolve('.github/workflows/desktop-manual-build.yml'), 'utf8')
-
-    for (const workflow of [releaseWorkflow, manualWorkflow]) {
-      expect(workflow).toContain('macos-26')
-      expect(workflow).toContain('macos-26-intel')
-    }
-  })
 })

@@ -590,35 +590,23 @@ describe('client TTS unified synthesize flow', () => {
 describe('client TTS autoplay call sites', () => {
   it('catches fire-and-forget custom TTS autoplay promises', () => {
     const messageItem = readFileSync('packages/client/src/components/hermes/chat/MessageItem.vue', 'utf8')
-    const groupMessageItem = readFileSync('packages/client/src/components/hermes/group-chat/GroupMessageItem.vue', 'utf8')
 
     expect(messageItem).toContain('function handleAutoplayTtsError')
     expect(messageItem).toContain('void speech.openaiPlay')
     expect(messageItem).toContain('void speech.mimoPlay')
     expect(messageItem).toContain('.catch(handleAutoplayTtsError)')
-
-    expect(groupMessageItem).toContain('function handleAutoplayTtsError')
-    expect(groupMessageItem).toContain('void speech.openaiPlay')
-    expect(groupMessageItem).toContain('void speech.mimoPlay')
-    expect(groupMessageItem).toContain('.catch(handleAutoplayTtsError)')
   })
 
   it('does not require a local MiMo API key before using server-stored TTS credentials', () => {
     const messageItem = readFileSync('packages/client/src/components/hermes/chat/MessageItem.vue', 'utf8')
-    const groupMessageItem = readFileSync('packages/client/src/components/hermes/group-chat/GroupMessageItem.vue', 'utf8')
 
     expect(messageItem).not.toContain('MiMo TTS API Key 为空')
-    expect(groupMessageItem).not.toContain('if (!voiceSettings.mimoApiKey.value) return')
     expect(messageItem).toContain('apiKey: apiKey || undefined')
-    expect(groupMessageItem).toContain('apiKey: apiKey || undefined')
   })
 
-  it('keeps profile-aware serialized playback scoped to group chat messages', () => {
+  it('keeps profile-aware serialized playback out of ordinary chat messages', () => {
     const messageItem = readFileSync('packages/client/src/components/hermes/chat/MessageItem.vue', 'utf8')
-    const groupMessageItem = readFileSync('packages/client/src/components/hermes/group-chat/GroupMessageItem.vue', 'utf8')
 
-    expect(groupMessageItem).toContain('speech.enqueueProfileSpeech')
-    expect(groupMessageItem).toContain('speech.profileToggle')
     expect(messageItem).not.toContain('speech.enqueueProfileSpeech')
     expect(messageItem).not.toContain('speech.profileToggle')
   })

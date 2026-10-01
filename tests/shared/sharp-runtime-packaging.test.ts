@@ -13,10 +13,8 @@ describe('Sharp runtime packaging guardrails', () => {
     expect(packageJson.scripts?.['verify:sharp-runtime']).toBe('node scripts/verify-sharp-runtime.mjs')
   })
 
+  // This distribution ships no upstream desktop/webui release workflows; the image is built from the Dockerfile.
   it.each([
-    '.github/workflows/desktop-release.yml',
-    '.github/workflows/desktop-manual-build.yml',
-    '.github/workflows/webui-release.yml',
     'Dockerfile',
   ])('runs the smoke test while building %s', (path) => {
     const source = read(path)

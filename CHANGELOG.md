@@ -1,5 +1,11 @@
 # X-Agent-Webui changelog
 
+## 0.6.1 — 2026-10-02
+
+- Claude chats that hit an API error (for example repeated 502 responses from a relay gateway) now show the native error text instead of only "exited with code 75: Native call failed". Claude Code's stream-json output marks these messages with `is_api_error_message`, while only the transcript spelling `isApiErrorMessage` was recognised; both are now handled. When the context check or the summary step before a compaction fails, the error line carries the native text and labels the outcome `error` instead of `success`.
+- Session list tabs use logical border properties, so their shared edge stays closed in right-to-left languages.
+- Tests no longer read the removed group-chat components or the upstream desktop/webui release workflows, which this distribution does not ship.
+
 ## 0.6.0 — 2026-10-01
 
 - Rebranded as X-Agent-Webui: the browser title, login and boot screens, sidebar version (X-Agent vX.Y.Z), notifications, error messages and settings now use the X-Agent name, with a new X logo and favicon; the Hermes Agent name, internal identifiers, data directories and existing settings are unchanged, so no migration is needed.
