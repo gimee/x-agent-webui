@@ -32,6 +32,10 @@ const listRef = ref<InstanceType<typeof VirtualMessageList> | null>(null);
 const pendingInitialScrollKey = ref<string | null>(null);
 const showScrollBottomButton = ref(false);
 const activeSession = computed(() => props.session || null);
+const imageSession = computed(() => {
+  const session = activeSession.value;
+  return session?.source === 'coding_agent' ? { id: session.id, profile: session.profile || 'default' } : undefined;
+});
 const assistantAgent = computed(() => chatSessionAgentAvatar(activeSession.value));
 const activeSessionScrollKey = computed(() =>
   messageScrollPositionKey(props.scrollScope, activeSession.value),
@@ -112,18 +116,68 @@ function isStablePrependAnchor(messageId: string): boolean {
   return displayMessages.value.find(message => String(message.id) === messageId)?.systemType !== "tool-run";
 }
 
+// Let the first screen and the existing prepend-anchor measurement settle between pages.
+const HISTORY_PREFETCH_DELAY = 600;
+const autoLoadPaused = ref(false);
+let prefetchTimer: ReturnType<typeof setTimeout> | null = null;
+let loadGeneration = 0;
+let loadingSession: Session | null = null;
+
+function cancelPrefetchTimer() {
+  if (prefetchTimer !== null) clearTimeout(prefetchTimer);
+  prefetchTimer = null;
+}
+
+function schedulePrefetch() {
+  cancelPrefetchTimer();
+  if (!activeSession.value?.hasMoreBefore || !props.loadOlder || autoLoadPaused.value) return;
+  prefetchTimer = setTimeout(() => {
+    prefetchTimer = null;
+    void handleTopReach();
+  }, HISTORY_PREFETCH_DELAY);
+}
+
 async function handleTopReach() {
   const session = activeSession.value;
-  if (!session?.hasMoreBefore || session.isLoadingOlderMessages || !props.loadOlder) return;
-  // hermes-v050:E-09 按视口里第一条行保持位置（补页那一刻由列表记下），不再按请求发出时的 scrollHeight 差值写回：
-  // 虚拟列表里新行先按估计高度排、量完又挪一次，请求期间用户继续滚的距离也会被那次写回覆盖，锚点跳几百像素。
-  listRef.value?.armPrependAnchor(isStablePrependAnchor);
-  const loaded = await props.loadOlder(session.id);
-  listRef.value?.disarmPrependAnchor();
-  if (!loaded) return;
-  await nextTick();
-  updateScrollBottomButton();
+  if (!session?.hasMoreBefore || session.isLoadingOlderMessages || loadingSession === session
+    || !props.loadOlder || autoLoadPaused.value) return;
+  cancelPrefetchTimer();
+  const generation = loadGeneration;
+  const list = listRef.value;
+  const before = session.loadedMessageCount ?? session.messages.length;
+  loadingSession = session;
+  // Reuse E-09's live viewport anchor, not the position when the request began.
+  list?.armPrependAnchor(isStablePrependAnchor);
+  try {
+    const loaded = await props.loadOlder(session.id);
+    await nextTick();
+    if (generation !== loadGeneration || activeSession.value !== session) return;
+    const advanced = (session.loadedMessageCount ?? session.messages.length) > before;
+    autoLoadPaused.value = session.hasMoreBefore === true && (!loaded || !advanced);
+    updateScrollBottomButton();
+  } catch {
+    if (generation === loadGeneration) autoLoadPaused.value = true;
+  } finally {
+    // A late response must never disarm the new session's list.
+    list?.disarmPrependAnchor();
+    if (generation === loadGeneration) {
+      loadingSession = null;
+      schedulePrefetch();
+    }
+  }
 }
+
+function retryOlderMessages() {
+  autoLoadPaused.value = false;
+  void handleTopReach();
+}
+
+watch([activeSession, activeSessionScrollKey], () => {
+  loadGeneration += 1;
+  loadingSession = null;
+  autoLoadPaused.value = false;
+  schedulePrefetch();
+}, { immediate: true });
 
 watch(
   activeSessionScrollKey,
@@ -159,7 +213,7 @@ watch(
 watch(
   () => (activeSession.value?.messages || []).length,
   (length) => {
-    if (length === 0) return
+    if (length === 0 || loadingSession === activeSession.value) return
     const scrollKey = activeSessionScrollKey.value
     if (scrollKey && pendingInitialScrollKey.value === scrollKey) {
       applyInitialSessionScroll(scrollKey);
@@ -181,6 +235,8 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  loadGeneration += 1;
+  cancelPrefetchTimer();
   saveSessionScrollPosition(activeSessionScrollKey.value);
 });
 
@@ -216,6 +272,9 @@ defineExpose({
           class="history-loader"
         >
           <span v-if="activeSession?.isLoadingOlderMessages" class="history-loader-spinner"></span>
+          <button v-else-if="autoLoadPaused" type="button" class="history-retry" @click="retryOlderMessages">
+            {{ t("common.retry") }}
+          </button>
         </div>
       </template>
       <template #item="{ message: msg }">
@@ -227,6 +286,7 @@ defineExpose({
         <MessageItem
           v-else
           :message="msg"
+          :image-session="imageSession"
           :assistant-agent="assistantAgent"
           :highlight="chatStore.focusMessageId === msg.id"
         />
@@ -305,6 +365,14 @@ defineExpose({
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+}
+
+.history-retry {
+  border: 0;
+  background: transparent;
+  color: $accent-primary;
+  font: inherit;
+  cursor: pointer;
 }
 
 .history-loader-spinner {

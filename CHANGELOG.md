@@ -1,5 +1,11 @@
 # X-Agent-Webui changelog
 
+## 0.6.3 — 2026-10-02
+
+- History now opens with the latest messages, then automatically loads earlier pages in serial background batches. The existing virtual list and reading-position anchor remain in place; switching conversations or profiles cancels the old task, and failed pages can be retried without being mistaken for the end of history.
+- Fixed `Unpaired native tool use` during Claude context compaction after parallel tool calls. Matching native tool results that live on sibling parent branches are retained with explicit provenance checks, without mixing sidechains or replaying tools. History structure is validated before an auxiliary or native summary call, avoiding a long summary wait followed by a local pairing error. No compression-model change is needed.
+- Local images in coding-agent replies now use the owning conversation's existing file-content endpoint in both live chat and history. Image zoom is unchanged; session/profile selection and encoded paths remain correct when switching conversations. Generic download permissions are unchanged, and final deliverables are directed to the current profile's persistent workspace instead of temporary storage.
+
 ## 0.6.1 — 2026-10-02
 
 - Claude chats that hit an API error (for example repeated 502 responses from a relay gateway) now show the native error text instead of only "exited with code 75: Native call failed". Claude Code's stream-json output marks these messages with `is_api_error_message`, while only the transcript spelling `isApiErrorMessage` was recognised; both are now handled. When the context check or the summary step before a compaction fails, the error line carries the native text and labels the outcome `error` instead of `success`.

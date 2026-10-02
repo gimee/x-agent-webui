@@ -223,6 +223,14 @@ export async function fetchSessionWorkspaceFileDiff(
   )
 }
 
+/** Image elements cannot send auth headers; use the existing session-scoped content route. */
+export function getSessionWorkspaceImageUrl(sessionId: string, path: string, profile: string): string {
+  const params = new URLSearchParams({ path, profile })
+  const token = getApiKey()
+  if (token) params.set('token', token)
+  return `${getBaseUrlValue()}/api/studio/sessions/${encodeURIComponent(sessionId)}/workspace-file/content?${params}`
+}
+
 export async function fetchSessionWorkspaceFileBlob(
   sessionId: string,
   path: string,

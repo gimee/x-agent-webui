@@ -187,6 +187,10 @@ const liveReasoningDetail = computed<{
   return null;
 });
 
+const imageSession = computed(() => {
+  const session = chatStore.activeSession;
+  return session?.source === 'coding_agent' ? { id: session.id, profile: session.profile || 'default' } : undefined;
+});
 const assistantAgent = computed(() => chatSessionAgentAvatar(chatStore.activeSession));
 const activeSessionProfileName = computed(() => (
   chatStore.activeSession?.profile || profilesStore.activeProfileName || "default"
@@ -720,6 +724,7 @@ defineExpose({
         <MessageItem
           v-else
           :message="msg"
+          :image-session="imageSession"
           :assistant-agent="assistantAgent"
           :user-profile-name="userProfileName"
           :user-profile-avatar="userProfileAvatar"

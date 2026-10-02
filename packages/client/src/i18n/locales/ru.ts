@@ -2781,6 +2781,9 @@ export default {
   },
 
   changelog: {
+    product_0_6_3_3: 'Fixed local images in coding-agent replies, including Claude. Live chat and history use the owning conversation file endpoint, preserve image zoom, and keep images scoped when switching sessions. Deliverables now use the current profile persistent workspace; generic file permissions are unchanged.',
+    product_0_6_3_2: 'Fixed Unpaired native tool use during Claude compaction after parallel tool calls. History now includes the matching results omitted by a single parent chain, preserving session and branch isolation. Structural validation runs before summary generation; changing the compression model is unnecessary.',
+    product_0_6_3_1: 'History opens with the latest messages, then automatically loads all earlier records in background batches without repeated upward scrolling. Reading position and virtual-list performance are preserved; switching conversations or leaving the page stops the old task, and failed loads can be retried.',
     product_0_6_1_1: 'Claude chats that hit an API error (for example repeated 502 responses from a relay gateway) now show the native error text, such as "API Error: 502 … try again in a moment", instead of only "exited with code 75: Native call failed"; when the context check or the summary step before a compaction fails, the error carries the same native text.',
     product_0_6_1_2: 'Session list tabs keep their shared border closed in right-to-left languages such as Arabic.',
     product_0_6_0_1: 'Rebranded as X-Agent-Webui: the browser title, login and boot screens, sidebar version (X-Agent vX.Y.Z), notifications, error messages and settings now use the X-Agent name, with a new X logo and favicon; the Hermes Agent name, internal identifiers, data directories and existing settings are unchanged, so no migration is needed.',

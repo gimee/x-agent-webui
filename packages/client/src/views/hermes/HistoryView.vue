@@ -255,9 +255,11 @@ async function loadHistorySession(sessionId: string, profile?: string | null) {
   let sessionData: Session | null = null
 
   if (page) {
-    const base = summary || page.session
+    // A deep link may select another profile while the sidebar still has its old summary.
+    const base = summary && (!sessionProfile || (summary.profile || 'default') === sessionProfile)
+      ? summary : page.session
     sessionData = sessionFromSummary(base, mapHistoryMessages(page.messages))
-    sessionData.profile = summary?.profile || sessionProfile || undefined
+    sessionData.profile = sessionProfile || base.profile || undefined
     sessionData.messageCount = page.total
     sessionData.messageTotal = page.total
     sessionData.loadedMessageCount = page.messages.length
@@ -310,8 +312,9 @@ async function loadOlderHistoryMessages(sessionId: string): Promise<boolean> {
   try {
     const page = await fetchSessionMessagesPage(sessionId, offset, HISTORY_PAGE_SIZE, target.profile)
     if (target !== historySession.value || target.id !== sessionId) return false
-    if (!page || page.messages.length === 0) {
-      target.hasMoreBefore = false
+    if (!page) return false // Request failure is retryable, not the end of history.
+    if (page.messages.length === 0) {
+      target.hasMoreBefore = page.hasMore
       return false
     }
 
@@ -322,7 +325,7 @@ async function loadOlderHistoryMessages(sessionId: string): Promise<boolean> {
     target.messageTotal = page.total
     target.messageCount = page.total
     target.hasMoreBefore = page.hasMore
-    return olderMessages.length > 0
+    return true // The raw paging cursor advanced even if this page only contained duplicates.
   } catch (err) {
     console.error('Failed to load older history messages:', err)
     return false
@@ -402,6 +405,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  historySessionRequestId += 1
+  historySession.value = null
   mobileQuery?.removeEventListener('change', handleMobileChange)
   window.removeEventListener('hermes:open-page-sidebar', openPageSidebar)
 })

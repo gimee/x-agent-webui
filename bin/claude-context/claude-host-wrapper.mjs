@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { runChild, readInput } from './process.mjs';
 import { parseArgs, internalArgs, uuid } from './args.mjs';
-import { activeChain, hash, observeEvents, selectHistory, retentionFloor, userMessages, mergeLedger, MANUAL_COMPACT_ACK, summaryRecords, openingRecords, bootstrapSummary } from './core.mjs';
+import { activeChain, validateHistory, hash, observeEvents, selectHistory, retentionFloor, userMessages, mergeLedger, MANUAL_COMPACT_ACK, summaryRecords, openingRecords, bootstrapSummary } from './core.mjs';
 import { managedModel, readModelOverrides } from './models.mjs';
 import { openStore, inside } from './store.mjs';
 import { prepareManagedPolicy, compactionSettings, nativeEnv, COMPACT_ENV } from './policy.mjs';
@@ -245,6 +245,8 @@ async function main() {
         hostStatus({status:'started',pre_tokens:pre});
         let summary,aux,selected,next;
         try {
+          // Validate the closed native history before spending a model call on a summary.
+          validateHistory(source.rows);
           // hermes-v051:R1-01 the successor state is built aside and committed only once it fits.
           const ackInput=manualCompact?MANUAL_COMPACT_ACK:budgetInput;
           // Carry every user message forward verbatim; the previous prefix is stripped by its identity.

@@ -16,10 +16,11 @@ export const AI_OUTPUT_FORMAT_GUIDELINES = `
 
 ## 路径规则
 
-- Unix/macOS/WSL：使用 \`/path/to/file\`，例如 \`/tmp/screenshot.png\`
+- Unix/macOS/WSL：使用 \`/path/to/file\`，例如 \`/path/to/persistent/workspace/screenshot.png\`
 - Windows：使用盘符绝对路径，并把反斜杠 \`\\\` 转成正斜杠 \`/\`，例如 \`C:/Users/Administrator/Desktop/screenshot.png\`
 - Windows 路径必须用尖括号包住链接目标，避免盘符冒号或特殊字符被 Markdown 误解析，例如 \`<C:/Users/Administrator/Desktop/screenshot.png>\`
 - 路径包含空格、中文或特殊字符时，必须使用尖括号包住链接目标，或对路径做 URL 编码
+- 交付前将图片、视频与文件保存或复制到当前 profile 的持久工作区（先解析 $HERMES_HOME/workspace；若环境变量缺失则查当前 profile，不猜目录）；不要用临时目录作为最终交付链接。下面 persistent/workspace 是示例，必须换成实际绝对路径。
 - 确保文件确实存在且路径正确
 
 ## 图片格式
@@ -27,8 +28,8 @@ export const AI_OUTPUT_FORMAT_GUIDELINES = `
 使用 Markdown 图片语法：
 
 \`\`\`
-![图片描述](/tmp/screenshot.png)
-![Sub2API Dashboard](/tmp/sub2api-dashboard.png)
+![图片描述](/path/to/persistent/workspace/screenshot.png)
+![Sub2API Dashboard](/path/to/persistent/workspace/sub2api-dashboard.png)
 ![桌面截图](<C:/Users/Administrator/Desktop/screenshot.png>)
 \`\`\`
 
@@ -37,8 +38,8 @@ export const AI_OUTPUT_FORMAT_GUIDELINES = `
 使用 Markdown 链接语法引用视频文件，支持格式：.mp4、.webm、.mov。视频会显示为可播放的视频播放器（最大 640x480），支持原生播放控件。
 
 \`\`\`
-[屏幕录制](/tmp/screen-recording.mp4)
-[操作演示](/tmp/demo.webm)
+[屏幕录制](/path/to/persistent/workspace/screen-recording.mp4)
+[操作演示](/path/to/persistent/workspace/demo.webm)
 [录屏2026-05-08 15.19.46](/Users/example/Desktop/录屏2026-05-08%2015.19.46.mov)
 [录屏2026-05-08 15.19.46](</Users/example/Desktop/录屏2026-05-08 15.19.46.mov>)
 [Windows 录屏](<C:/Users/Administrator/Desktop/screen recording.mov>)
@@ -55,7 +56,7 @@ export const AI_OUTPUT_FORMAT_GUIDELINES = `
 使用 Markdown 链接语法：
 
 \`\`\`
-[下载报告](/tmp/monthly-report.pdf)
+[下载报告](/path/to/persistent/workspace/monthly-report.pdf)
 [下载报告](<C:/Users/Administrator/Desktop/monthly-report.pdf>)
 \`\`\`
 
@@ -80,10 +81,11 @@ When your response includes an image, video, or file reference, use Markdown and
 
 ## Path rules
 
-- Unix/macOS/WSL: use \`/path/to/file\`, for example \`/tmp/screenshot.png\`
+- Unix/macOS/WSL: use \`/path/to/file\`, for example \`/path/to/persistent/workspace/screenshot.png\`
 - Windows: use an absolute drive-letter path and replace backslashes \`\\\` with forward slashes \`/\`, for example \`C:/Users/Administrator/Desktop/screenshot.png\`
 - Wrap Windows link targets in angle brackets so the drive-letter colon and special characters are parsed correctly, for example \`<C:/Users/Administrator/Desktop/screenshot.png>\`
 - If a path contains spaces, Chinese characters, or other special characters, wrap the link target in angle brackets or URL-encode the path
+- Before delivery, save or copy images, videos and files into the current profile persistent workspace (resolve $HERMES_HOME/workspace first; if unset, look up the active profile rather than guessing). Do not link temporary files as final deliverables. Replace the persistent/workspace examples below with real absolute paths.
 - Make sure the file exists and the path is correct
 
 ## Image format
@@ -91,8 +93,8 @@ When your response includes an image, video, or file reference, use Markdown and
 Use Markdown image syntax:
 
 \`\`\`
-![Image description](/tmp/screenshot.png)
-![Sub2API Dashboard](/tmp/sub2api-dashboard.png)
+![Image description](/path/to/persistent/workspace/screenshot.png)
+![Sub2API Dashboard](/path/to/persistent/workspace/sub2api-dashboard.png)
 ![Desktop screenshot](<C:/Users/Administrator/Desktop/screenshot.png>)
 \`\`\`
 
@@ -101,8 +103,8 @@ Use Markdown image syntax:
 Use Markdown link syntax for video files. Supported formats are .mp4, .webm, and .mov. The client renders them as playable videos with native controls, up to 640x480.
 
 \`\`\`
-[Screen recording](/tmp/screen-recording.mp4)
-[Demo](/tmp/demo.webm)
+[Screen recording](/path/to/persistent/workspace/screen-recording.mp4)
+[Demo](/path/to/persistent/workspace/demo.webm)
 [Recording 2026-05-08 15.19.46](/Users/example/Desktop/recording%202026-05-08%2015.19.46.mov)
 [Recording 2026-05-08 15.19.46](</Users/example/Desktop/recording 2026-05-08 15.19.46.mov>)
 [Windows recording](<C:/Users/Administrator/Desktop/screen recording.mov>)
@@ -119,7 +121,7 @@ Incorrect examples:
 Use Markdown link syntax:
 
 \`\`\`
-[Download report](/tmp/monthly-report.pdf)
+[Download report](/path/to/persistent/workspace/monthly-report.pdf)
 [Download report](<C:/Users/Administrator/Desktop/monthly-report.pdf>)
 \`\`\`
 

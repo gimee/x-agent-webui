@@ -178,6 +178,46 @@ function retention(rows, context, { reserve = 0, bootstrap = null, currentInput 
 /** hermes-v051:R1-01 a successor's fixed tokens before any summary exists, reserving summaryTokens for it. */
 export const retentionFloor = (rows, context, { summaryTokens = 0, ...options } = {}) => retention(rows, context, options).estimate('', []) + summaryTokens;
 
+const blocksOf = row => Array.isArray(row?.message?.content) ? row.message.content
+  : Array.isArray(row?.content) ? row.content : [];
+
+// Keep the tool pairing state in one place. The same grouping is used by the
+// early compaction guard and by retention, so a history cannot pass one check
+// and fail a subtly different copy later.
+function toolExchangeGroups(rows) {
+  const groups = [], pending = new Set(), toolIds = new Set(), resultIds = new Set();
+  let group = [];
+  for (const row of rows) {
+    for (const block of blocksOf(row)) {
+      if (block?.type === 'tool_use') {
+        if (typeof block.id !== 'string' || !block.id) throw new Error('Invalid native tool use');
+        if (toolIds.has(block.id)) throw new Error('Duplicate native tool use');
+        toolIds.add(block.id); pending.add(block.id);
+      }
+      if (block?.type === 'tool_result') {
+        if (typeof block.tool_use_id !== 'string' || !block.tool_use_id) throw new Error('Invalid native tool result');
+        if (resultIds.has(block.tool_use_id)) throw new Error('Duplicate or ambiguous native tool result');
+        resultIds.add(block.tool_use_id);
+        if (!pending.delete(block.tool_use_id)) throw new Error('Unpaired native tool result');
+      }
+    }
+    group.push(row);
+    if (!pending.size) { groups.push(group); group = []; }
+  }
+  if (pending.size) throw new Error('Unpaired native tool use');
+  if (group.length) groups.push(group);
+  return groups;
+}
+
+// Called by the wrapper immediately before any summary request. It deliberately
+// validates only the rows supplied by the caller; normal, non-compacting turns
+// do not need this scan. activeChain() supplies the closed rows for compaction.
+export function validateHistory(rows) {
+  if (!Array.isArray(rows)) throw new Error('Invalid native history');
+  toolExchangeGroups(rows.filter(kept));
+  return rows;
+}
+
 /**
  * Memory-first retention. The target (default 80K = 20% of the 400K trigger)
  * is a floor for what survives (no safety reserve: overshooting a floor is fine,
@@ -194,21 +234,7 @@ export function selectHistory(rows, context, { summary, target = 80000, minRecen
   const fixed = estimate([]);
   if (fixed > hardLimit) throw new Error('Summary/system context exceeds hard budget');
   const budget = Math.max(target, fixed + minRecent);
-  const groups = []; let group = [];
-  const pending = new Set(), toolIds = new Set();
-  for (const r of selectedRows) {
-    const blocks = Array.isArray(r.content) ? r.content : [];
-    for (const b of blocks) {
-      if (b.type === 'tool_use') { if (toolIds.has(b.id)) throw new Error('Duplicate tool use'); toolIds.add(b.id); pending.add(b.id); }
-      if (b.type === 'tool_result') { if (!pending.delete(b.tool_use_id)) throw new Error('Unpaired native tool result'); }
-    }
-    group.push(r);
-    // Each complete tool exchange is indivisible, not the entire user turn.
-    // A later answer/small exchange must survive an oversized earlier result.
-    if (!pending.size) { groups.push(group); group=[]; }
-  }
-  if (pending.size) throw new Error('Unpaired native tool use');
-  if (group.length) groups.push(group);
+  const groups = toolExchangeGroups(selectedRows);
   let chosen = [], excerpted = false;
   // hermes-v051:C protect_last_n: the newest N records stay verbatim (whole tool exchanges); the budget grows for
   // them up to protectLimit (half the trigger), never past the hard limit. Oversized text is excerpted as before.
@@ -235,6 +261,52 @@ export function selectHistory(rows, context, { summary, target = 80000, minRecen
   return { reference: reference(chosen), selectedSources: chosen.map(r=>r.source), estimatedTotalTokens: estimate(chosen), currentInputTokens, tokenEstimation: 'native-Messages-calibrated UTF-8 bytes; not exact tokenizer', ratio, reserve, target: budget, requestedTarget: target, ledgerMessages: ledger.length, ledgerTruncated: memory.truncated, excerpted, protectLastN, openingRecords: opening.length };
 }
 
+function closeParallelToolResults(nodes, chain) {
+  const chainIds = new Set(chain.map(row => row.uuid));
+  const index = new Map([...nodes.keys()].map((id, i) => [id, i]));
+  const owners = new Map(), results = new Set();
+  for (const row of chain.filter(kept)) for (const block of blocksOf(row)) {
+    if (block?.type === 'tool_use') {
+      if (owners.has(block.id)) throw new Error('Duplicate native tool use');
+      owners.set(block.id, row);
+    }
+    if (block?.type === 'tool_result') results.add(block.tool_use_id);
+  }
+  const additions = [];
+  for (const row of nodes.values()) {
+    if (chainIds.has(row.uuid) || row.type !== 'user' || !kept(row)) continue;
+    const blocks = blocksOf(row).filter(block => block?.type === 'tool_result');
+    if (!blocks.some(block => {
+      const owner = owners.get(block.tool_use_id);
+      return owner && (row.parentUuid === owner.uuid || row.sourceToolAssistantUUID === owner.uuid);
+    })) continue;
+    // Import only a result with two exact links to its active call. Existing
+    // chain rows keep their native parent layout (which may be another result).
+    for (const block of blocks) {
+      const owner = owners.get(block.tool_use_id);
+      if (!owner) throw new Error('Unpaired native tool result');
+      if (row.parentUuid !== owner.uuid || row.sourceToolAssistantUUID !== owner.uuid)
+        throw new Error('Ambiguous native tool result provenance');
+      if (index.get(row.uuid) <= index.get(owner.uuid) || index.get(row.uuid) > index.get(chain.at(-1).uuid))
+        throw new Error('Native tool result falls outside the active owner window');
+      if (results.has(block.tool_use_id)) throw new Error('Duplicate or ambiguous native tool result');
+      results.add(block.tool_use_id);
+    }
+    additions.push(row);
+  }
+  if (!additions.length) return chain;
+  // Native append order orders sibling results; never reorder the original
+  // parent chain or replace its tail (the wrapper reads usage from that tail).
+  const merged = []; let added = 0, previousIndex = -1;
+  for (const row of chain) {
+    const at = index.get(row.uuid);
+    if (at < previousIndex) throw new Error('Ambiguous native history order');
+    while (added < additions.length && index.get(additions[added].uuid) < at) merged.push(additions[added++]);
+    merged.push(row); previousIndex = at;
+  }
+  return merged;
+}
+
 export function activeChain(rows, nativeId) {
   const nodes = new Map();
   for (const row of rows) {
@@ -256,7 +328,7 @@ export function activeChain(rows, nativeId) {
     if (!parent) throw new Error('Missing native parent');
     node = parent;
   }
-  return chain.reverse();
+  return closeParallelToolResults(nodes, chain.reverse());
 }
 
 export function observeEvents(events) {

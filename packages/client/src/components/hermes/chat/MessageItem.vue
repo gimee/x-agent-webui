@@ -31,7 +31,7 @@ import { speedToEdgeRate, hzToEdgePitch } from "@/utils/ttsHelpers";
 import { formatChatTimestamp } from "@/utils/chat-timestamp";
 import { formatCommandResultText } from "@/utils/hermes/command-result-text";
 import { openSubagentStream, subagentIdFromToolCall } from "@/utils/hermes/subagent-stream";
-import type { WorkspaceRunChangeSummary } from "@/api/studio/sessions";
+import { getSessionWorkspaceImageUrl, type WorkspaceRunChangeSummary } from "@/api/studio/sessions";
 import { isServerTtsProvider } from "@/api/studio/tts";
 import type { ProfileAvatar as ProfileAvatarData } from "@/api/hermes/profiles";
 import ProfileAvatar from "@/components/hermes/profiles/ProfileAvatar.vue";
@@ -53,6 +53,7 @@ const JSON_TRUNCATED_KEY = "__truncated__";
 
 const props = withDefaults(defineProps<{
   message: Message
+  imageSession?: { id: string; profile: string }
   highlight?: boolean
   headingIdPrefix?: string
   showForkAction?: boolean
@@ -65,6 +66,12 @@ const props = withDefaults(defineProps<{
 });
 const { t } = useI18n();
 const toast = useMessage();
+
+// The list supplies the message owner; never borrow the globally active chat on history pages.
+const resolveImageUrl = computed(() => {
+  const owner = props.imageSession;
+  return owner ? (path: string) => getSessionWorkspaceImageUrl(owner.id, path, owner.profile) : undefined;
+});
 
 const isSystem = computed(() => props.message.role === "system");
 const isAgentError = computed(() => props.message.role === "assistant" && props.message.systemType === "error");
@@ -1021,7 +1028,7 @@ onBeforeUnmount(() => {
             <div v-if="message.reasoning?.trim()" class="tool-detail-section">
               <div class="tool-detail-label">{{ t("chat.thinkingLabel") }}</div>
               <div class="tool-detail-reasoning">
-                <MarkdownRenderer :content="message.reasoning" />
+                <MarkdownRenderer :resolve-image-url="resolveImageUrl" :content="message.reasoning" />
               </div>
             </div>
             <div v-if="formattedToolArgs" class="tool-detail-section" data-copy-source="tool-args">
@@ -1163,10 +1170,10 @@ onBeforeUnmount(() => {
                 </span>
               </div>
               <div v-if="thinkingExpanded" class="thinking-body">
-                <MarkdownRenderer :content="thinkingFullText" />
+                <MarkdownRenderer :resolve-image-url="resolveImageUrl" :content="thinkingFullText" />
               </div>
             </div>
-            <MarkdownRenderer
+            <MarkdownRenderer :resolve-image-url="resolveImageUrl"
               v-if="parsedThinking.body && message.role === 'assistant'"
               :content="parsedThinking.body"
               :heading-id-prefix="effectiveHeadingIdPrefix"
@@ -1229,14 +1236,14 @@ onBeforeUnmount(() => {
                 </div>
               </template>
               <template v-if="parsedMessageReference">
-                <MarkdownRenderer :content="referencedContentMarkdown" />
-                <MarkdownRenderer v-if="parsedMessageReference.reply" :content="parsedMessageReference.reply" />
+                <MarkdownRenderer :resolve-image-url="resolveImageUrl" :content="referencedContentMarkdown" />
+                <MarkdownRenderer :resolve-image-url="resolveImageUrl" v-if="parsedMessageReference.reply" :content="parsedMessageReference.reply" />
               </template>
-              <MarkdownRenderer v-else-if="displayText" :content="displayText" />
+              <MarkdownRenderer :resolve-image-url="resolveImageUrl" v-else-if="displayText" :content="displayText" />
             </template>
 
             <!-- Render assistant message content -->
-            <MarkdownRenderer
+            <MarkdownRenderer :resolve-image-url="resolveImageUrl"
               v-if="message.role === 'assistant' && message.content && !parsedThinking.body"
               :content="message.content"
               :heading-id-prefix="effectiveHeadingIdPrefix"
@@ -1258,7 +1265,7 @@ onBeforeUnmount(() => {
             />
 
             <!-- Render system message content -->
-            <MarkdownRenderer
+            <MarkdownRenderer :resolve-image-url="resolveImageUrl"
               v-if="message.role === 'system' && message.content && !isCommandMessage"
               :content="message.content"
             />
@@ -1283,7 +1290,7 @@ onBeforeUnmount(() => {
             <!-- hermes-v050:U3 -->
             <div v-else-if="isCommandMessage && message.content" class="command-result">
               <span class="command-result-icon">/</span>
-              <MarkdownRenderer :content="commandDisplayContent" />
+              <MarkdownRenderer :resolve-image-url="resolveImageUrl" :content="commandDisplayContent" />
             </div>
 
             <span v-if="message.isStreaming && !message.content" class="streaming-dots">

@@ -274,7 +274,10 @@ function decorateRenderedHtml(blockHtml: string, headingStart: number): { html: 
     if (!isLocalFilePath(path)) return match
     if (props.resolveImageUrl && !path.startsWith('//')) {
       let decodedPath = md.utils.unescapeAll(path)
-      try { decodedPath = decodeURIComponent(decodedPath) } catch { /* Keep literal paths. */ }
+      // Unwrap before decoding: decoding a whole query first turns encoded &/# into delimiters.
+      const downloadPath = decodedPath.startsWith('/api/studio/files/download?') ? downloadPathFromUrl(decodedPath) : null
+      if (downloadPath !== null) decodedPath = downloadPath
+      else try { decodedPath = decodeURIComponent(decodedPath) } catch { /* Keep literal paths. */ }
       return `src="${md.utils.escapeHtml(props.resolveImageUrl(normalizeLocalFilePath(decodedPath)))}"`
     }
     const downloadUrl = getDownloadUrl(normalizeLocalFilePath(path))
